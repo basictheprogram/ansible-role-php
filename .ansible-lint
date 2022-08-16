@@ -3,3 +3,14 @@ skip_list:
   - 'risky-shell-pipe'
   - 'no-handler'
   - 'role-name'
+
+warn_list:
+  - experimental
+  - fqcn-builtins
+
+exclude_paths:
+  - ~/.ansible
+  - .gitlab-ci.yml
+  - .pre-commit-config.yaml
+  - .cache/
+  - .github/
