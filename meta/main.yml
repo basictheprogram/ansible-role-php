@@ -21,9 +21,11 @@ galaxy_info:
         - all
     - name: Ubuntu
       versions:
-        - trusty
-        - xenial
-        - bionic
+        - trusty   # 14.04
+        - xenial   # 16.04
+        - bionic   # 18.04
+        - hirsute  # 21.04
+        - jammy    # 22.04
   galaxy_tags:
     - development
     - web
