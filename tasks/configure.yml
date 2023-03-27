@@ -9,6 +9,10 @@
     - "{{ php_conf_paths }}"
     - "{{ php_extension_conf_paths }}"
 
+- name: Debug
+  debug:
+    msg: "{{ php_include_path }}"
+
 - name: Place PHP configuration file in place.
   ansible.builtin.template:
     src: php.ini.j2

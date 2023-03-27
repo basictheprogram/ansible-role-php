@@ -53,7 +53,7 @@ html_errors = On
 ; Data Handling ;
 ;;;;;;;;;;;;;;;;;
 
-variables_order = "GPCS"
+variables_order = "{{ php_variables_order | default(GPCS) }}"
 request_order = "GP"
 register_argc_argv = Off
 auto_globals_jit = On
@@ -70,6 +70,7 @@ default_mimetype = "text/html"
 
 doc_root =
 user_dir =
+include_path = {{ php_include_path | default("/usr/share/php") }}
 
 enable_dl = Off
 
