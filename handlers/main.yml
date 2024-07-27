@@ -4,7 +4,9 @@
     name: "{{ php_webserver_daemon }}"
     state: restarted
   notify: restart php-fpm
-  when: php_enable_webserver
+  when:
+    - php_enable_webserver
+    - not php_restart
 
 - name: restart php-fpm
   ansible.builtin.service:
