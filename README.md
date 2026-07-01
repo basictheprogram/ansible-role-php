@@ -211,7 +211,7 @@ None.
       vars_files:
         - vars/main.yml
       roles:
-        - { role: php }
+        - { role: realtime.php }
 
 *Inside `vars/main.yml`*:
 
