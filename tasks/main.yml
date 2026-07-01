@@ -1,19 +1,29 @@
 ---
 # Variable setup.
 - name: Include OS-specific variables.
-  ansible.builtin.include_vars: "{{ ansible_os_family }}.yml"
+  ansible.builtin.include_vars: "{{ ansible_facts.os_family }}.yml"
 
 - name: Include distribution and version-specific vars.
   ansible.builtin.include_vars: "{{ item }}"
   with_first_found:
     - files:
-        - "{{ ansible_distribution }}-{{ ansible_distribution_major_version }}.yml"
+        - "{{ ansible_facts.distribution }}-{{ ansible_facts.distribution_major_version }}.yml"
       skip: true
 
 - name: Set the default PHP version for Debian-based OSes.
   ansible.builtin.set_fact:
     php_default_version_debian: "{{ __php_default_version_debian }}"
-  when: php_default_version_debian is not defined and ansible_os_family == 'Debian'
+  when: php_default_version_debian is not defined and ansible_facts.os_family == 'Debian'
+
+- name: Define the name of the JSON extension package on Debian for PHP <8.
+  set_fact:
+    __php_json_package_debian: "{{ 'php' + php_default_version_debian + '-json' }}"
+  when: ansible_facts.os_family == 'Debian' and php_default_version_debian is version('8.0', '<')
+
+- name: Add the JSON extension on Debian for PHP <8.
+  set_fact:
+    __php_packages: "{{ __php_packages + [__php_json_package_debian] }}"
+  when: __php_json_package_debian is defined and __php_json_package_debian not in __php_packages
 
 - name: Define php_packages.
   ansible.builtin.set_fact:
@@ -43,7 +53,7 @@
 - name: Define php_opcache_conf_filename (Ubuntu 16.04).
   ansible.builtin.set_fact:
     php_opcache_conf_filename: "10-opcache.ini"
-  when: php_opcache_conf_filename is not defined and ansible_distribution_version == "16.04"
+  when: php_opcache_conf_filename is not defined and ansible_facts.distribution_version == "16.04"
 
 - name: Define php_opcache_conf_filename.
   ansible.builtin.set_fact:
@@ -59,12 +69,12 @@
 - include_tasks: setup-RedHat.yml
   when:
     - not php_install_from_source
-    - ansible_os_family == 'RedHat'
+    - ansible_facts.os_family == 'RedHat'
 
 - include_tasks: setup-Debian.yml
   when:
     - not php_install_from_source
-    - ansible_os_family == 'Debian'
+    - ansible_facts.os_family == 'Debian'
 
 # Install PHP from source when php_install_from_source is true.
 - include_tasks: install-from-source.yml

@@ -5,9 +5,9 @@
     state: directory
     follow: true
     mode: 0755
-  with_flattened:
-    - "{{ php_conf_paths }}"
-    - "{{ php_extension_conf_paths }}"
+  with_items:
+    - "{{ php_conf_paths | flatten }}"
+    - "{{ php_extension_conf_paths | flatten }}"
 
 - name: Debug
   debug:
