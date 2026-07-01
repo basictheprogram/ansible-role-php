@@ -1,0 +1,383 @@
+---
+argument_specs:
+  main:
+    short_description: Install and configure PHP.
+    description:
+      - Installs PHP (CLI, FPM, OpCache, APCu) on RedHat/CentOS/Fedora and
+        Debian/Ubuntu servers, either from distro packages or compiled from
+        source. Manages php.ini, PHP-FPM pool configs, OpCache and APCu
+        settings via templates.
+    options:
+      php_enablerepo:
+        type: str
+        default: ""
+        description:
+          - (RedHat/CentOS only) Comma-separated list of repos to enable
+            when installing PHP packages (e.g. "remi,epel").
+      php_packages_extra:
+        type: list
+        elements: str
+        default: []
+        description:
+          - Extra PHP packages to install in addition to the distro-specific
+            default list.
+      php_default_version_debian:
+        type: str
+        required: false
+        description:
+          - (Debian/Ubuntu only) Overrides the OS-specific default PHP
+            version. Not set by default in defaults/main.yml; each
+            vars/<Distribution>-<version>.yml file supplies its own default
+            (__php_default_version_debian) which this variable can override.
+      php_packages_state:
+        type: str
+        default: present
+        choices: [present, latest]
+        description:
+          - State to pass to the package manager for php_packages.
+      php_install_recommends:
+        type: bool
+        default: true
+        description:
+          - (Debian/Ubuntu only) Whether to install recommended packages
+            alongside php_packages.
+      php_enable_webserver:
+        type: bool
+        default: true
+        description:
+          - Whether this role should manage/restart a webserver alongside
+            PHP. Set to false if running PHP standalone (e.g. via PHP-FPM
+            behind a container runtime).
+      php_restart:
+        type: bool
+        default: true
+        description:
+          - Whether the webserver handler should actually restart the
+            webserver when notified. Set to false to suppress webserver
+            restarts even when php_enable_webserver is true.
+      php_enable_php_fpm:
+        type: bool
+        default: false
+        description:
+          - Whether to install, configure, and manage PHP-FPM.
+      php_fpm_state:
+        type: str
+        default: started
+        description:
+          - Desired running state of the php-fpm service.
+      php_fpm_handler_state:
+        type: str
+        default: restarted
+        choices: [restarted, reloaded]
+        description:
+          - Action the restart handler takes on php-fpm when notified.
+      php_fpm_enabled_on_boot:
+        type: bool
+        default: true
+        description:
+          - Whether php-fpm should be enabled to start on boot.
+      php_fpm_listen:
+        type: str
+        default: "127.0.0.1:9000"
+        description:
+          - Address/socket the default www FPM pool listens on.
+      php_fpm_listen_allowed_clients:
+        type: str
+        default: "127.0.0.1"
+        description:
+          - Clients allowed to connect to the FPM listen address.
+      php_fpm_pm_max_children:
+        type: int
+        default: 50
+        description:
+          - Default pm.max_children for the FPM process manager.
+      php_fpm_pm_start_servers:
+        type: int
+        default: 5
+        description:
+          - Default pm.start_servers for the FPM process manager.
+      php_fpm_pm_min_spare_servers:
+        type: int
+        default: 5
+        description:
+          - Default pm.min_spare_servers for the FPM process manager.
+      php_fpm_pm_max_spare_servers:
+        type: int
+        default: 5
+        description:
+          - Default pm.max_spare_servers for the FPM process manager.
+      php_fpm_pm_max_requests:
+        type: int
+        default: 0
+        description:
+          - Default pm.max_requests for the FPM process manager (0 = unlimited).
+      php_fpm_pm_status_path:
+        type: str
+        default: ""
+        description:
+          - Default FPM status page path (empty disables it).
+      php_fpm_pools:
+        type: list
+        elements: dict
+        default:
+          - pool_name: www
+            pool_template: www.conf.j2
+        description:
+          - List of PHP-FPM pools to create. Each entry may set
+            pool_name, pool_template, and any of the pool_pm_* overrides;
+            unset keys fall back to the php_fpm_pm_* defaults above.
+      php_executable:
+        type: str
+        default: php
+        description:
+          - Executable to run when calling PHP from the command line.
+      php_opcache_zend_extension:
+        type: str
+        default: opcache.so
+      php_opcache_enable:
+        type: str
+        default: "1"
+      php_opcache_enable_cli:
+        type: str
+        default: "0"
+      php_opcache_memory_consumption:
+        type: str
+        default: "96"
+      php_opcache_interned_strings_buffer:
+        type: str
+        default: "16"
+      php_opcache_max_accelerated_files:
+        type: str
+        default: "4096"
+      php_opcache_max_wasted_percentage:
+        type: str
+        default: "5"
+      php_opcache_validate_timestamps:
+        type: str
+        default: "1"
+      php_opcache_revalidate_path:
+        type: str
+        default: "0"
+      php_opcache_revalidate_freq:
+        type: str
+        default: "2"
+      php_opcache_max_file_size:
+        type: str
+        default: "0"
+      php_opcache_blacklist_filename:
+        type: str
+        default: ""
+      php_opcache_jit_buffer_size:
+        type: str
+        default: 100M
+        description:
+          - OpCache JIT buffer size (PHP 8+).
+      php_opcache_conf_filename:
+        type: str
+        required: false
+        description:
+          - Platform-specific OpCache ini filename. Computed per-OS via
+            __php_opcache_conf_filename if not overridden.
+      php_enable_apc:
+        type: bool
+        default: true
+        description:
+          - Whether to enable APCu. Other php_apc_* variables have no
+            effect when this is false.
+      php_apc_shm_size:
+        type: str
+        default: 96M
+      php_apc_enable_cli:
+        type: str
+        default: "0"
+      php_apc_conf_filename:
+        type: str
+        required: false
+        description:
+          - Platform-specific APCu ini filename. Computed per-OS via
+            __php_apc_conf_filename if not overridden.
+      php_use_managed_ini:
+        type: bool
+        default: true
+        description:
+          - Whether this role manages php.ini. If false, none of the
+            php_* ini-setting variables below have any effect.
+      php_expose_php:
+        type: str
+        default: "On"
+      php_memory_limit:
+        type: str
+        default: 256M
+      php_max_execution_time:
+        type: str
+        default: "60"
+      php_max_input_time:
+        type: str
+        default: "60"
+      php_max_input_vars:
+        type: str
+        default: "1000"
+      php_realpath_cache_size:
+        type: str
+        default: 32K
+      php_file_uploads:
+        type: str
+        default: "On"
+      php_upload_max_filesize:
+        type: str
+        default: 64M
+      php_max_file_uploads:
+        type: str
+        default: "20"
+      php_post_max_size:
+        type: str
+        default: 32M
+      php_date_timezone:
+        type: str
+        default: America/Chicago
+      php_allow_url_fopen:
+        type: str
+        default: "On"
+      php_sendmail_path:
+        type: str
+        default: "/usr/sbin/sendmail -t -i"
+      php_output_buffering:
+        type: str
+        default: "4096"
+      php_short_open_tag:
+        type: str
+        default: "Off"
+      php_disable_functions:
+        type: list
+        elements: str
+        default: []
+      php_precision:
+        type: int
+        default: 14
+      php_serialize_precision:
+        type: str
+        default: "-1"
+      php_session_cookie_lifetime:
+        type: int
+        default: 0
+      php_session_gc_probability:
+        type: int
+        default: 0
+      php_session_gc_divisor:
+        type: int
+        default: 1000
+      php_session_gc_maxlifetime:
+        type: int
+        default: 1440
+      php_session_save_handler:
+        type: str
+        default: files
+      php_session_save_path:
+        type: str
+        default: ""
+      php_error_reporting:
+        type: str
+        default: "E_ALL & ~E_DEPRECATED & ~E_STRICT"
+      php_display_errors:
+        type: str
+        default: "Off"
+      php_display_startup_errors:
+        type: str
+        default: "Off"
+      php_install_from_source:
+        type: bool
+        default: false
+        description:
+          - Compile PHP from source instead of installing distro packages.
+      php_source_repo:
+        type: str
+        default: https://github.com/php/php-src.git
+      php_source_version:
+        type: str
+        default: master
+        description:
+          - git branch, tag, or commit hash of php-src to build.
+      php_source_clone_dir:
+        type: str
+        default: "~/php-src"
+      php_source_clone_depth:
+        type: int
+        default: 1
+      php_source_install_path:
+        type: str
+        default: /opt/php
+      php_source_install_gmp_path:
+        type: str
+        default: /usr/include/x86_64-linux-gnu/gmp.h
+      php_source_mysql_config:
+        type: str
+        default: /usr/bin/mysql_config
+      php_source_make_command:
+        type: str
+        default: make
+        description:
+          - Set to "make --jobs=X" to parallelize the source build.
+      php_source_configure_command:
+        type: str
+        description:
+          - Full ./configure invocation used when building PHP from source.
+            See defaults/main.yml for the full default option list.
+      php_packages:
+        type: list
+        elements: str
+        required: false
+        description:
+          - OS-specific list of PHP packages to install. Not set in
+            defaults/main.yml; computed per-OS from vars/<OsFamily>.yml's
+            __php_packages unless explicitly overridden.
+      php_webserver_daemon:
+        type: str
+        required: false
+        description:
+          - Name of the webserver service to restart on config changes.
+            Computed per-OS via __php_webserver_daemon unless overridden.
+      php_conf_paths:
+        type: list
+        elements: str
+        required: false
+        description:
+          - Directories where php.ini should be placed. Computed per-OS
+            via __php_conf_paths unless overridden.
+      php_extension_conf_paths:
+        type: list
+        elements: str
+        required: false
+        description:
+          - Directories where extension ini files (APCu, OpCache) should
+            be placed. Computed per-OS via __php_extension_conf_paths
+            unless overridden.
+      php_fpm_daemon:
+        type: str
+        required: false
+        description:
+          - Name of the php-fpm service. Computed per-OS via
+            __php_fpm_daemon unless overridden.
+      php_fpm_conf_path:
+        type: str
+        required: false
+        description:
+          - Directory containing php-fpm.conf. Computed per-OS via
+            __php_fpm_conf_path unless overridden.
+      php_fpm_pool_conf_path:
+        type: str
+        required: false
+        description:
+          - Path to the default FPM pool conf file. Computed per-OS via
+            __php_fpm_pool_conf_path unless overridden.
+      php_fpm_pool_user:
+        type: str
+        required: false
+        description:
+          - User FPM pool workers run as. Computed per-OS via
+            __php_fpm_pool_user unless overridden.
+      php_fpm_pool_group:
+        type: str
+        required: false
+        description:
+          - Group FPM pool workers run as. Computed per-OS via
+            __php_fpm_pool_group unless overridden.

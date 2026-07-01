@@ -1,4 +1,9 @@
-*.pyc
-*.retry
-*/__pycache__
-.cache
+*.py[cod]
+.ansible/
+.cache/
+.env
+.venv/
+__pycache__/
+molecule/.cache/
+venv/
+zzz.diff

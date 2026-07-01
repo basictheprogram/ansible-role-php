@@ -4,13 +4,13 @@
     path: "{{ item }}"
     state: directory
     follow: true
-    mode: 0755
+    mode: "0755"
   with_items:
     - "{{ php_conf_paths | flatten }}"
     - "{{ php_extension_conf_paths | flatten }}"
 
 - name: Debug
-  debug:
+  ansible.builtin.debug:
     msg: "{{ php_include_path }}"
 
 - name: Place PHP configuration file in place.
@@ -19,7 +19,7 @@
     dest: "{{ item }}/php.ini"
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
   with_items: "{{ php_conf_paths }}"
-  notify: restart webserver
+  notify: Restart webserver
   when: php_use_managed_ini

@@ -1,0 +1,31 @@
+---
+- name: Assert ansible-core meets the minimum supported version.
+  ansible.builtin.assert:
+    that:
+      - ansible_version.full is version('2.20', '>=')
+    fail_msg: >-
+      ansible-role-php requires ansible-core >= 2.20; this control node is
+      running {{ ansible_version.full }}.
+    quiet: true
+
+- name: Assert the target host's OS family is supported.
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['os_family'] in ['Debian', 'RedHat']
+    fail_msg: >-
+      ansible-role-php does not support {{ ansible_facts['os_family'] }}
+      (only Debian and RedHat OS families are supported).
+    quiet: true
+
+- name: Assert each PHP-FPM pool has a pool_name defined.
+  ansible.builtin.assert:
+    that:
+      - item.pool_name is defined
+      - item.pool_name | length > 0
+    fail_msg: >-
+      Every entry in php_fpm_pools must define a non-empty pool_name.
+    quiet: true
+  loop: "{{ php_fpm_pools | default([], true) }}"
+  loop_control:
+    label: "{{ item.pool_name | default('(unnamed)') }}"
+  when: php_enable_php_fpm

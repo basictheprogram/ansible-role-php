@@ -30,7 +30,7 @@
     state: directory
     owner: root
     group: root
-    mode: 0755
+    mode: "0755"
   when: php_fpm_pool_conf_path_dir_stat.stat.islnk is not defined
 
 - name: Create fpm pools.
@@ -39,11 +39,11 @@
     dest: "{{ php_fpm_pool_conf_path | dirname }}/{{ item.pool_name }}.conf"
     owner: root
     group: root
-    mode: 0644
+    mode: "0644"
     force: true
   loop: "{{ php_fpm_pools | default([], true) }}"
   when: php_enable_php_fpm
-  notify: restart php-fpm
+  notify: Restart php-fpm
 
 - name: Ensure php-fpm is started and enabled at boot (if configured).
   ansible.builtin.service:

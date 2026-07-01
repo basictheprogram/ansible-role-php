@@ -1,215 +1,200 @@
 # Ansible Role: PHP
 
-[![CI](https://github.com/geerlingguy/ansible-role-php/actions/workflows/ci.yml/badge.svg)](https://github.com/geerlingguy/ansible-role-php/actions/workflows/ci.yml)
+Fork of [geerlingguy/ansible-role-php](https://github.com/geerlingguy/ansible-role-php) by Jeff Geerling. This fork lives at [basictheprogram/ansible-role-php](https://github.com/basictheprogram/ansible-role-php); bugs and pull requests go there, not upstream.
 
-Installs PHP on RedHat/CentOS and Debian/Ubuntu servers.
+Installs and configures PHP (CLI, FPM, OpCache, APCu) on RedHat/CentOS and Debian/Ubuntu servers, either from distro packages or compiled from source.
 
 ## Requirements
 
-If you're using an older LTS release of Ubuntu or RHEL, with an old/outdated version of PHP, you need to use a repo or PPA with a maintained PHP version, as this role only works with [PHP versions that are currently supported](http://php.net/supported-versions.php) by the PHP community.
+* Ansible core >= 2.20.
+* If you're using an older LTS release of Ubuntu or RHEL with an old/outdated version of PHP, you need to use a repo or PPA with a maintained PHP version, as this role only works with [PHP versions that are currently supported](http://php.net/supported-versions.php) by the PHP community.
+
+## Supported Platforms
+
+Matches `meta/main.yml`:
+
+| OS family | Versions |
+| --- | --- |
+| Fedora | all |
+| Debian | 12 (bookworm), 13 (trixie) |
+| Ubuntu | 22.04 (jammy), 24.04 (noble) |
+| EL (RHEL/CentOS/Rocky/AlmaLinux) | 9, 10 |
 
 ## Role Variables
 
-Available variables are listed below, along with default values (see `defaults/main.yml`):
+Available variables are listed below, grouped as in `defaults/main.yml`, along with their default values.
 
-    php_packages: []
+### General
 
-A list of the PHP packages to install (OS-specific by default). You'll likely want to install common packages like `php`, `php-cli`, `php-devel` and `php-pdo`, and you can add in whatever other packages you'd like (for example, `php-gd` for image manipulation, or `php-ldap` if you need to connect to an LDAP server for authentication).
-
-_Note: If you're using Debian/Ubuntu, you also need to install `libapache2-mod-fastcgi` (for cgi/PHP-FPM) or `libapache2-mod-php7.0` (or a similar package depending on PHP version) if you want to use `mod_php` with Apache._
-
-    php_packages_extra: []
-
-A list of extra PHP packages to install without overriding the default list.
-
-    php_enable_webserver: true
-
-If your usage of PHP is tied to a web server (e.g. Apache or Nginx), leave this default value. If you are using PHP server-side or to run some small application, set this value to `false` so this role doesn't attempt to interact with a web server.
-
-    php_webserver_daemon: "httpd"
-
-The default values for the HTTP server daemon are `httpd` (used by Apache) for RedHat/CentOS, or `apache2` (also used by Apache) for Debian/Ubuntu. If you are running another webserver (for example, `nginx`), change this value to the name of the daemon under which the webserver runs.
-
-    php_enablerepo: ""
-
-(RedHat/CentOS only) If you have enabled any additional repositories (might I suggest [geerlingguy.repo-epel](https://github.com/geerlingguy/ansible-role-repo-epel) or [geerlingguy.repo-remi](https://github.com/geerlingguy/ansible-role-repo-remi)), those repositories can be listed under this variable (e.g. `remi-php70,epel`). This can be handy, as an example, if you want to install the latest version of PHP 7.0, which is in the Remi repository.
-
-    php_default_version_debian: ""
-
-(Debian/Ubuntu only) The default version of PHP in the given OS version repositories. The specific version is set per distro and per version, but you can override it by providing a value here, like `"7.4"`.
-
-**If you'd like to be able to switch PHP versions easily, or use a version that's not available in system packages**: You can use the [`geerlingguy.php-versions`](https://galaxy.ansible.com/geerlingguy/php-versions/) role to more easily switch between major PHP versions (e.g. 5.6, 7.1, 7.2).
-
-    php_packages_state: "present"
-
-If you have enabled any additional repositories such as [geerlingguy.repo-epel](https://github.com/geerlingguy/ansible-role-repo-epel) or [geerlingguy.repo-remi](https://github.com/geerlingguy/ansible-role-repo-remi), you may want an easy way to swap PHP versions on the fly. By default, this is set to `"present"`. You can override this variable to `"latest"` to upgrade to the latest available version. Combined with `php_enablerepo`, a user now doesn't need to manually uninstall the existing PHP packages before installing them from a different repository.
-
-    php_install_recommends: true
-
-(Debian/Ubuntu only) Whether to install recommended packages when installing `php_packages`; you might want to set this to `no` explicitly if you're installing a PPA that recommends certain packages you don't want (e.g. Ondrej's `php` PPA will install `php7.0-cli` if you install `php-pear` alongside `php5.6-cli`... which is often not desired!).
-
-    php_executable: "php"
-
-The executable to run when calling PHP from the command line. You should only change this if running `php` on your server doesn't target the correct executable, or if you're using software collections on RHEL/CentOS and need to target a different version of PHP.
+| Variable | Default | Description |
+| --- | --- | --- |
+| `php_enablerepo` | `""` | (RedHat/CentOS only) Comma-separated list of repos to enable when installing PHP packages, e.g. `remi-php82,epel`. |
+| `php_packages_extra` | `[]` | Extra PHP packages to install without overriding the default list. |
+| `php_default_version_debian` | *(unset)* | (Debian/Ubuntu only) Overrides the OS-specific default PHP version, e.g. `"8.2"`. See [OS-Specific Variables](#os-specific-variables) below for the per-release default. |
+| `php_packages_state` | `present` | Package state; use `latest` to upgrade or switch versions using a new repo. |
+| `php_install_recommends` | `true` | (Debian/Ubuntu only) Whether to install recommended packages alongside `php_packages`. |
+| `php_enable_webserver` | `true` | Set to `false` if you're not tying PHP to a webserver (e.g. running FPM standalone). |
+| `php_restart` | `true` | Whether the webserver handler actually restarts the webserver when notified. Set to `false` to suppress restarts even when `php_enable_webserver` is `true`. |
+| `php_executable` | `php` | The executable to run when calling PHP from the command line. |
 
 ### PHP-FPM
 
-PHP-FPM is a simple and robust FastCGI Process Manager for PHP. It can dramatically ease scaling of PHP apps and is the normal way of running PHP-based sites and apps when using a webserver like Nginx (though it can be used with other webservers just as easily).
+PHP-FPM is a FastCGI process manager for PHP, and the normal way of running PHP behind Nginx (or Apache via `geerlingguy.apache-php-fpm`).
 
-When using this role with PHP running as `php-fpm` instead of as a process inside a webserver (e.g. Apache's `mod_php`), you need to set the following variable to `true`:
+| Variable | Default | Description |
+| --- | --- | --- |
+| `php_enable_php_fpm` | `false` | Set to `true` when running PHP as `php-fpm` instead of inside the webserver process. |
+| `php_fpm_state` | `started` | Desired running state of the php-fpm service. |
+| `php_fpm_handler_state` | `restarted` | `reloaded` instead of `restarted` if you'd rather reload php-fpm on config changes. |
+| `php_fpm_enabled_on_boot` | `true` | Whether php-fpm starts on boot. |
+| `php_fpm_listen` | `127.0.0.1:9000` | Address/socket the default `www` pool listens on. |
+| `php_fpm_listen_allowed_clients` | `127.0.0.1` | Clients allowed to connect to `php_fpm_listen`. |
+| `php_fpm_pm_max_children` | `50` | Default `pm.max_children`. |
+| `php_fpm_pm_start_servers` | `5` | Default `pm.start_servers`. |
+| `php_fpm_pm_min_spare_servers` | `5` | Default `pm.min_spare_servers`. |
+| `php_fpm_pm_max_spare_servers` | `5` | Default `pm.max_spare_servers`. |
+| `php_fpm_pm_max_requests` | `0` | Default `pm.max_requests` (`0` = unlimited). |
+| `php_fpm_pm_status_path` | `""` | Default FPM status page path (empty disables it). |
 
-    php_enable_php_fpm: false
+```yaml
+php_fpm_pools:
+  - pool_name: www
+    pool_template: www.conf.j2
+    pool_listen: "{{ php_fpm_listen }}"
+    pool_listen_allowed_clients: "{{ php_fpm_listen_allowed_clients }}"
+    pool_pm: dynamic
+    pool_pm_max_children: "{{ php_fpm_pm_max_children }}"
+    pool_pm_start_servers: "{{ php_fpm_pm_start_servers }}"
+    pool_pm_min_spare_servers: "{{ php_fpm_pm_min_spare_servers }}"
+    pool_pm_max_spare_servers: "{{ php_fpm_pm_max_spare_servers }}"
+    pool_pm_max_requests: "{{ php_fpm_pm_max_requests }}"
+    pool_pm_status_path: "{{ php_fpm_pm_status_path }}"
+```
 
-If you're using Apache, you can easily get it configured to work with PHP-FPM using the [geerlingguy.apache-php-fpm](https://github.com/geerlingguy/ansible-role-apache-php-fpm) role.
-
-    php_fpm_state: started
-    php_fpm_enabled_on_boot: true
-
-Control over the fpm daemon's state; set these to `stopped` and `false` if you want FPM to be installed and configured, but not running (e.g. when installing in a container).
-
-    php_fpm_handler_state: restarted
-
-The handler restarts PHP-FPM by default. Setting the value to `reloaded` will reload the service, intead of restarting it.
-
-
-    php_fpm_pools:
-      - pool_name: www
-        pool_template: www.conf.j2
-        pool_listen: "127.0.0.1:9000"
-        pool_listen_allowed_clients: "127.0.0.1"
-        pool_pm: dynamic
-        pool_pm_max_children: 5
-        pool_pm_start_servers: 2
-        pool_pm_min_spare_servers: 1
-        pool_pm_max_spare_servers: 3
-        pool_pm_max_requests: 500
-        pool_pm_status_path: /status
-
-List of PHP-FPM pool to create. By default, www pool is created. To setup a new pool, add an item to php_fpm_pools list.
-
-Specific settings inside the default `www.conf.j2` PHP-FPM pool. If you'd like to manage additional settings, you can do so either by replacing the file with your own template using `pool_template`.
+List of PHP-FPM pools to create; the `www` pool is created by default. To add a pool, append an item — each item may override any `pool_pm_*` key, or replace the whole pool config with a custom template via `pool_template`. `preflight.yml` asserts every pool entry defines a non-empty `pool_name` when `php_enable_php_fpm` is `true`.
 
 ### php.ini settings
 
-    php_use_managed_ini: true
+| Variable | Default | Description |
+| --- | --- | --- |
+| `php_use_managed_ini` | `true` | Set to `false` to self-manage `php.ini` (all variables below are then ignored). |
+| `php_expose_php` | `On` | |
+| `php_memory_limit` | `256M` | |
+| `php_max_execution_time` | `60` | |
+| `php_max_input_time` | `60` | |
+| `php_max_input_vars` | `1000` | |
+| `php_realpath_cache_size` | `32K` | |
+| `php_file_uploads` | `On` | |
+| `php_upload_max_filesize` | `64M` | |
+| `php_max_file_uploads` | `20` | |
+| `php_post_max_size` | `32M` | |
+| `php_date_timezone` | `America/Chicago` | |
+| `php_allow_url_fopen` | `On` | |
+| `php_sendmail_path` | `/usr/sbin/sendmail -t -i` | |
+| `php_output_buffering` | `4096` | |
+| `php_short_open_tag` | `Off` | |
+| `php_disable_functions` | `[]` | |
+| `php_precision` | `14` | |
+| `php_serialize_precision` | `-1` | |
+| `php_session_cookie_lifetime` | `0` | |
+| `php_session_gc_probability` | `0` | |
+| `php_session_gc_divisor` | `1000` | |
+| `php_session_gc_maxlifetime` | `1440` | |
+| `php_session_save_handler` | `files` | |
+| `php_session_save_path` | `""` | |
+| `php_error_reporting` | `E_ALL & ~E_DEPRECATED & ~E_STRICT` | |
+| `php_display_errors` | `Off` | |
+| `php_display_startup_errors` | `Off` | |
 
-By default, all the extra defaults below are applied through the php.ini included with this role. You can self-manage your php.ini file (if you need more flexibility in its configuration) by setting this to `false` (in which case all the below variables will be ignored).
-
-    php_fpm_pool_user: "[apache|nginx|other]" # default varies by OS
-    php_fpm_pool_group: "[apache|nginx|other]" # default varies by OS
-    php_memory_limit: "256M"
-    php_max_execution_time: "60"
-    php_max_input_time: "60"
-    php_max_input_vars: "1000"
-    php_realpath_cache_size: "32K"
-    php_file_uploads: "On"
-    php_upload_max_filesize: "64M"
-    php_max_file_uploads: "20"
-    php_post_max_size: "32M"
-    php_date_timezone: "America/Chicago"
-    php_allow_url_fopen: "On"
-    php_sendmail_path: "/usr/sbin/sendmail -t -i"
-    php_output_buffering: "4096"
-    php_short_open_tag: false
-    php_error_reporting: "E_ALL & ~E_DEPRECATED & ~E_STRICT"
-    php_display_errors: "Off"
-    php_display_startup_errors: "On"
-    php_expose_php: "On"
-    php_session_cookie_lifetime: 0
-    php_session_gc_probability: 1
-    php_session_gc_divisor: 1000
-    php_session_gc_maxlifetime: 1440
-    php_session_save_handler: files
-    php_session_save_path: ''
-    php_disable_functions: []
-    php_precision: 14
-    php_serialize_precision: "-1"
-
-Various defaults for PHP. Only used if `php_use_managed_ini` is set to `true`.
+Only used when `php_use_managed_ini` is `true`.
 
 ### OpCache-related Variables
 
-The OpCache is included in PHP starting in version 5.5, and the following variables will only take effect if the version of PHP you have installed is 5.5 or greater.
+The OpCache is included in PHP starting in version 5.5.
 
-    php_opcache_zend_extension: "opcache.so"
-    php_opcache_enable: "1"
-    php_opcache_enable_cli: "0"
-    php_opcache_memory_consumption: "96"
-    php_opcache_interned_strings_buffer: "16"
-    php_opcache_max_accelerated_files: "4096"
-    php_opcache_max_wasted_percentage: "5"
-    php_opcache_validate_timestamps: "1"
-    php_opcache_revalidate_path: "0"
-    php_opcache_revalidate_freq: "2"
-    php_opcache_max_file_size: "0"
-    php_opcache_jit_buffer_size: 100M
-
-OpCache ini directives that are often customized on a system. Make sure you have enough memory and file slots allocated in the OpCache (`php_opcache_memory_consumption`, in MB, and `php_opcache_max_accelerated_files`) to contain all the PHP code you are running. If not, you may get less-than-optimal performance!
-
-For custom opcache.so location provide full path with `php_opcache_zend_extension`.
-
-    php_opcache_conf_filename: [platform-specific]
-
-The platform-specific opcache configuration filename. Generally the default should work, but in some cases, you may need to override the filename.
+| Variable | Default | Description |
+| --- | --- | --- |
+| `php_opcache_zend_extension` | `opcache.so` | Full path if `opcache.so` isn't already on the default extension path. |
+| `php_opcache_enable` | `1` | |
+| `php_opcache_enable_cli` | `0` | |
+| `php_opcache_memory_consumption` | `96` | In MB — make sure this and `php_opcache_max_accelerated_files` are large enough to hold all the PHP code you're running. |
+| `php_opcache_interned_strings_buffer` | `16` | |
+| `php_opcache_max_accelerated_files` | `4096` | |
+| `php_opcache_max_wasted_percentage` | `5` | |
+| `php_opcache_validate_timestamps` | `1` | |
+| `php_opcache_revalidate_path` | `0` | |
+| `php_opcache_revalidate_freq` | `2` | |
+| `php_opcache_max_file_size` | `0` | |
+| `php_opcache_blacklist_filename` | `""` | |
+| `php_opcache_jit_buffer_size` | `100M` | PHP 8+ only. |
+| `php_opcache_conf_filename` | *(OS-specific)* | Generally the computed default works; override only if you need a different filename. |
 
 ### APCu-related Variables
 
-    php_enable_apc: true
+| Variable | Default | Description |
+| --- | --- | --- |
+| `php_enable_apc` | `true` | Other `php_apc_*` variables have no effect when this is `false`. |
+| `php_apc_shm_size` | `96M` | Size it to hold all cache entries with a little overhead — fragmentation or APC running out of memory will slow PHP down *dramatically*. |
+| `php_apc_enable_cli` | `0` | |
+| `php_apc_conf_filename` | *(OS-specific)* | Generally the computed default works; override only if you need a different filename. |
 
-Whether to enable APCu. Other APCu variables will be ineffective if this is set to false.
-
-    php_apc_shm_size: "96M"
-    php_apc_enable_cli: "0"
-
-APCu ini directives that are often customized on a system. Set the `php_apc_shm_size` so it will hold all cache entries in memory with a little overhead (fragmentation or APC running out of memory will slow down PHP *dramatically*).
-
-    php_apc_conf_filename: [platform-specific]
-
-The platform-specific APC configuration filename. Generally the default should work, but in some cases, you may need to override the filename.
-
-#### Ensuring APC is installed
-
-If you use APC, you will need to make sure APC is installed (it is installed by default, but if you customize the `php_packages` list, you need to include APC in the list):
-
-  - *On RHEL/CentOS systems*: Make sure `php-pecl-apcu` is in the list of `php_packages`.
-  - *On Debian/Ubuntu systems*: Make sure `php-apcu` is in the list of `php_packages`.
+Make sure APCu is actually in your package list if you customize `php_packages`: `php-pecl-apcu` on RHEL/CentOS, `phpX.Y-apcu` on Debian/Ubuntu.
 
 ### Installing from Source
 
-If you need a specific version of PHP, or would like to test the latest (e.g. master) version of PHP, there's a good chance there's no suitable package already available in your platform's package manager. In these cases, you may choose to install PHP from source by compiling it directly.
+If you need a PHP version with no suitable package for your platform, you can compile from source. Source builds take *much* longer than installing packages (5+ minutes for PHP HEAD on a modern quad-core machine).
 
-Note that source compilation takes *much* longer than installing from packages (PHP HEAD takes 5+ minutes to compile on a modern quad-core computer, just as a point of reference).
+| Variable | Default | Description |
+| --- | --- | --- |
+| `php_install_from_source` | `false` | Set to `true` to install PHP from source instead of from packages. |
+| `php_source_repo` | `https://github.com/php/php-src.git` | |
+| `php_source_version` | `master` | A git branch, tag, or commit hash. |
+| `php_source_clone_dir` | `~/php-src` | |
+| `php_source_clone_depth` | `1` | |
+| `php_source_install_path` | `/opt/php` | |
+| `php_source_install_gmp_path` | `/usr/include/x86_64-linux-gnu/gmp.h` | Platform/distribution-specific GMP header location. |
+| `php_source_mysql_config` | `/usr/bin/mysql_config` | May be `mariadb_config` on newer OS versions. |
+| `php_source_make_command` | `make` | Set to `make --jobs=X` (X = core count) to speed up compilation. |
+| `php_source_configure_command` | *(see `defaults/main.yml`)* | The full `./configure` invocation; edit to match your environment. |
 
-    php_install_from_source: false
+A few notes for specific configurations:
 
-Set this to `true` to install PHP from source instead of installing from packages.
+* **Apache with `mpm_prefork`**: make sure `apxs2` is available (e.g. `apache2-prefork-dev` on Ubuntu) and `--with-apxs2` is in `php_source_configure_command`. Load `mpm_prefork`, not `mpm_worker`/`mpm_event`, and add a `phpX.conf` Apache module config.
+* **Apache with `mpm_event`/`mpm_worker`**: compile PHP with FPM (`--enable-fpm`). Install CGI/event support (`apache2-mpm-event`, `libapache2-mod-fastcgi`) and load `mpm_event`.
+* **Nginx**: compile PHP with FPM (`--enable-fpm`).
 
-    php_source_version: "master"
+## OS-Specific Variables
 
-The version of PHP to install from source (a git branch, tag, or commit hash).
+These are loaded via `include_vars` from `vars/<OsFamily>.yml` and then `vars/<Distribution>-<MajorVersion>.yml` — they are computed per-OS, not meant to be overridden the way `defaults/` variables are (though you still can, by setting them directly).
 
-    php_source_clone_dir: "~/php-src"
-    php_source_clone_depth: 1
-    php_source_install_path: "/opt/php"
-    php_source_install_gmp_path: "/usr/include/x86_64-linux-gnu/gmp.h"
-    php_source_mysql_config: "/usr/bin/mysql_config"
+| Variable | Debian family | RedHat family |
+| --- | --- | --- |
+| `php_webserver_daemon` | `apache2` | `httpd` |
+| `php_conf_paths` | `/etc/php/<ver>/{fpm,apache2,cli}` | `/etc` |
+| `php_extension_conf_paths` | `/etc/php/<ver>/{fpm,apache2,cli}/conf.d` | `/etc/php.d` |
+| `php_apc_conf_filename` | `20-apcu.ini` | `50-apc.ini` |
+| `php_opcache_conf_filename` | `10-opcache.ini` | `10-opcache.ini` |
+| `php_fpm_daemon` | `php<ver>-fpm` | `php-fpm` |
+| `php_fpm_conf_path` | `/etc/php/<ver>/fpm` | `/etc/fpm` |
+| `php_fpm_pool_conf_path` | `<fpm_conf_path>/pool.d/www.conf` | `/etc/php-fpm.d/www.conf` |
+| `php_fpm_pool_user` / `php_fpm_pool_group` | `www-data` | `apache` |
+| `php_packages` | version-templated list, see `vars/Debian.yml` | fixed list, see `vars/RedHat.yml` |
 
-Location where source will be cloned and installed, and the location of the GMP header file (which can be platform/distribution specific), and `mysql_config` binary (this may be `mariadb_config` in newer operating system versions).
+Default PHP version per supported release (`__php_default_version_debian`, only applies to the Debian family — RedHat family packages are unversioned):
 
-    php_source_make_command: "make"
+| Release | Default PHP version |
+| --- | --- |
+| Debian 12 (bookworm) | 8.2 |
+| Debian 13 (trixie) | 8.4 |
+| Ubuntu 22.04 (jammy) | 8.1 |
+| Ubuntu 24.04 (noble) | 8.3 |
 
-Set the `make` command to `make --jobs=X` where `X` is the number of cores present on the server where PHP is being compiled. Will speed up compilation times dramatically if you have multiple cores.
+## Task Flow
 
-    php_source_configure_command: >
-      [...]
-
-The `./configure` command that will build the Makefile to be used for PHP compilation. Add in all the options you need for your particular environment. Using a folded scalar (`>`) allows you to define the variable over multiple lines, which is extremely helpful for legibility and source control!
-
-A few other notes/caveats for specific configurations:
-
-  - **Apache with `mpm_prefork`**: If you're using Apache with prefork as a webserver for PHP, you will need to make sure `apxs2` is available on your system (e.g. by installing `apache2-prefork-dev` in Ubuntu), and you will need to make sure the option `--with-apxs2` is defined in `php_source_configure_command`. Finally, you will need to make sure the `mpm_prefork` module is loaded instead of `mpm_worker` or `mpm_event`, and likely add a `phpX.conf` (where `X` is the major version of PHP) configuration file to the Apache module config folder with contents like [`php7.conf`](https://gist.github.com/geerlingguy/5ae5445f28e71264e8c1).
-  - **Apache with `mpm_event` or `mpm_worker`**: If you're using Apache with event or worker as a webserver for PHP, you will need to compile PHP with FPM. Make sure the option `--enable-fpm` is defined in `php_source_configure_command`. You'll also need to make sure Apache's support for CGI and event is installed (e.g. by installing `apache2-mpm-event` and `libapache2-mod-fastcgi`) and the `mpm_event` module is loaded.
-  - **Nginx**: If you're using Nginx as a webserver for PHP, you will need to compile PHP with FPM. Make sure the option `--enable-fpm` is defined in `php_source_configure_command`.
+1. **Preflight** (`tasks/preflight.yml`) — asserts ansible-core >= 2.20, that the target's OS family is supported, and (when `php_enable_php_fpm` is `true`) that every `php_fpm_pools` entry has a `pool_name`.
+2. **Variable setup** — loads `vars/<OsFamily>.yml`, then `vars/<Distribution>-<MajorVersion>.yml` if present, and computes any `php_*` fact not already defined.
+3. **Install** — `setup-RedHat.yml` or `setup-Debian.yml` (package install), or `install-from-source.yml` when `php_install_from_source` is `true`.
+4. **Configure** — `configure.yml` (php.ini), `configure-apcu.yml`, `configure-opcache.yml`, `configure-fpm.yml`, each notifying the webserver/php-fpm restart handlers on change.
 
 ## Dependencies
 
@@ -221,7 +206,7 @@ None.
       vars_files:
         - vars/main.yml
       roles:
-        - { role: geerlingguy.php }
+        - { role: php }
 
 *Inside `vars/main.yml`*:
 
@@ -246,4 +231,4 @@ MIT / BSD
 
 ## Author Information
 
-This role was created in 2014 by [Jeff Geerling](https://www.jeffgeerling.com/), author of [Ansible for DevOps](https://www.ansiblefordevops.com/).
+Originally created in 2014 by [Jeff Geerling](https://www.jeffgeerling.com/), author of [Ansible for DevOps](https://www.ansiblefordevops.com/). This fork is maintained by Bob Tanner / Real Time Enterprises, Inc.

@@ -3,27 +3,47 @@ dependencies: []
 
 galaxy_info:
   role_name: php
-  author: geerlingguy
-  description: PHP for RedHat/CentOS/Fedora/Debian/Ubuntu.
-  company: "Midwestern Mac, LLC"
+  namespace: realtime
+  author: "Bob Tanner"
+  description: >-
+    Installs and configures PHP (CLI, FPM, OpCache, APCu) from distro
+    packages or from source on RedHat/CentOS/Fedora and Debian/Ubuntu
+    servers. Manages php.ini, PHP-FPM pool configs, and OpCache/APCu
+    extension settings via templates.
+  company: "Real Time Enterprises, Inc."
   license: "license (BSD, MIT)"
-  min_ansible_version: 2.10
+  min_ansible_version: "2.20"
+  issue_tracker_url: https://github.com/basictheprogram/ansible-role-php/issues
   platforms:
     - name: Fedora
       versions:
         - all
     - name: Debian
       versions:
-        - all
+        - bookworm  # 12
+        - trixie    # 13
     - name: Ubuntu
       versions:
-        - all
+        - jammy  # 22.04
+        - noble  # 24.04
+    - name: EL
+      versions:
+        - "9"
+        - "10"
   galaxy_tags:
     - development
     - web
     - php
     - language
     - fpm
+    - opcache
+    - apcu
+    - cli
+    - redhat
+    - centos
+    - debian
+    - ubuntu
+    - fedora
     - drupal
     - wordpress
     - joomla

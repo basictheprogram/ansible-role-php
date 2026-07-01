@@ -1,7 +1,7 @@
 ---
 - name: Converge
   hosts: all
-  #become: true
+  # become: true
 
   vars:
     php_enable_webserver: false
@@ -14,19 +14,25 @@
 
   pre_tasks:
     - name: Update apt cache.
-      ansible.builtin.apt: update_cache=true cache_valid_time=600
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 600
       when: ansible_facts.os_family == 'Debian'
       changed_when: false
 
   roles:
     - role: geerlingguy.git
-    - role: geerlingguy.php
+    - role: "{{ lookup('env', 'MOLECULE_PROJECT_DIRECTORY') | basename }}"
 
   post_tasks:
     - name: Confirm PHP configuration is correct.
-      ansible.builtin.shell: php -i | grep 'memory_limit.*192'
+      ansible.builtin.shell:
+        cmd: set -o pipefail && php -i | grep 'memory_limit.*192'
+        executable: /bin/bash
       changed_when: false
 
     - name: Check the installed PHP version.
-      ansible.builtin.shell: '/usr/bin/php --version | grep -qF "PHP {{ php_version }}"'
+      ansible.builtin.shell:
+        cmd: set -o pipefail && /usr/bin/php --version | grep -qF "PHP {{ php_version }}"
+        executable: /bin/bash
       changed_when: false
