@@ -11,7 +11,7 @@ galaxy_info:
     servers. Manages php.ini, PHP-FPM pool configs, and OpCache/APCu
     extension settings via templates.
   company: "Real Time Enterprises, Inc."
-  license: "license (BSD, MIT)"
+  license: MIT
   min_ansible_version: "2.20"
   issue_tracker_url: https://github.com/basictheprogram/ansible-role-php/issues
   platforms:
@@ -24,8 +24,9 @@ galaxy_info:
         - trixie    # 13
     - name: Ubuntu
       versions:
-        - jammy  # 22.04
-        - noble  # 24.04
+        - jammy    # 22.04
+        - noble    # 24.04
+        - resolute # 26.04
     - name: EL
       versions:
         - "9"

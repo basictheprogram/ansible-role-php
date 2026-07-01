@@ -1,6 +1,10 @@
 # Ansible Role: PHP
 
-Fork of [geerlingguy/ansible-role-php](https://github.com/geerlingguy/ansible-role-php) by Jeff Geerling. This fork lives at [basictheprogram/ansible-role-php](https://github.com/basictheprogram/ansible-role-php); bugs and pull requests go there, not upstream.
+[![CI](https://github.com/basictheprogram/ansible-role-php/actions/workflows/ci.yml/badge.svg)](https://github.com/basictheprogram/ansible-role-php/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![ansible-core](https://img.shields.io/badge/ansible--core-%3E%3D2.20-blue.svg)](https://github.com/ansible/ansible)
+
+> **This is a fork.** Upstream is [geerlingguy/ansible-role-php](https://github.com/geerlingguy/ansible-role-php) by Jeff Geerling. This fork lives at [basictheprogram/ansible-role-php](https://github.com/basictheprogram/ansible-role-php) — **file bugs and pull requests there, not upstream.**
 
 Installs and configures PHP (CLI, FPM, OpCache, APCu) on RedHat/CentOS and Debian/Ubuntu servers, either from distro packages or compiled from source.
 
@@ -17,7 +21,7 @@ Matches `meta/main.yml`:
 | --- | --- |
 | Fedora | all |
 | Debian | 12 (bookworm), 13 (trixie) |
-| Ubuntu | 22.04 (jammy), 24.04 (noble) |
+| Ubuntu | 22.04 (jammy), 24.04 (noble), 26.04 (resolute) |
 | EL (RHEL/CentOS/Rocky/AlmaLinux) | 9, 10 |
 
 ## Role Variables
@@ -188,6 +192,7 @@ Default PHP version per supported release (`__php_default_version_debian`, only 
 | Debian 13 (trixie) | 8.4 |
 | Ubuntu 22.04 (jammy) | 8.1 |
 | Ubuntu 24.04 (noble) | 8.3 |
+| Ubuntu 26.04 (resolute) | 8.5 |
 
 ## Task Flow
 
@@ -227,8 +232,9 @@ None.
 
 ## License
 
-MIT / BSD
+MIT
 
 ## Author Information
 
-Originally created in 2014 by [Jeff Geerling](https://www.jeffgeerling.com/), author of [Ansible for DevOps](https://www.ansiblefordevops.com/). This fork is maintained by Bob Tanner / Real Time Enterprises, Inc.
+* Originally created in 2014 by [Jeff Geerling](https://www.jeffgeerling.com/), author of [Ansible for DevOps](https://www.ansiblefordevops.com/).
+* This fork is maintained by Bob Tanner / Real Time Enterprises, Inc.
