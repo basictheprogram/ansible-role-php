@@ -140,67 +140,46 @@ If a task touches one of these, leave a `# TODO(open-q):` comment:
 Work one section at a time. Each item = one focused session and one
 commit. Stop and verify between items.
 
-This role just had an `ansible-sync-role` pass started against it. Steps 1,
-1b, and 2 (template config files, legacy CI scan, this CLAUDE.md) are done.
-What's left, in order:
+The `ansible-sync-role` pass is complete — it first landed in `9de10d6`
+(2026-07-01) and was re-synced against the current template on
+2026-09-05. The role is on ansible-core 2.20 standards: preflight
+assertions (`tasks/preflight.yml`), `meta/argument_specs.yml` (full
+`defaults/` coverage), a custom testinfra suite under
+`molecule/default/tests/`, `molecule/requirements.txt`, the testinfra
+verifier, and an explicit 6-platform `molecule.yml` matrix. `meta/main.yml`
+no longer carries a `platforms:` key — the OS/version support statement
+lives in `galaxy_info.description:` and must stay in sync with the README
+Supported Platforms table and the `molecule.yml` matrix.
 
-1. **ansible-core 2.20 compliance** — audit `tasks/*.yml` for deprecated
-   patterns: `include_vars`+`first_found` `paths:` must point at `vars/`
-   (currently does — verify it stays that way), any custom `loop_var:` needs
-   a `php_` prefix, any secret-handling loop needs `no_log: true` (none
-   currently exist), and confirm no OS family task file needs dropping
-   against `meta/main.yml` platforms.
-2. **ansible-lint clean** — resolve violations against the newly-synced
-   `.ansible-lint` (Step 1 already overwrote it with the template's
-   stricter `enable_list`, so this role has not yet been linted against
-   it). Check `meta/main.yml` against `meta[incorrect]`/`meta[no-info]`/
-   `meta[no-tags]`/`meta[video-links]`. This role has no
-   `meta/argument_specs.yml` yet — create one documenting `defaults/main.yml`.
-   Check `templates/`/tasks that write files for explicit `mode:`.
-3. **Refactor `meta/main.yml`** — still has `author: geerlingguy`,
-   `min_ansible_version: 2.10`, and a stale `platforms:` list (Fedora/
-   Debian/Ubuntu all `versions: [all]`, no RedHat/CentOS/Rocky/AlmaLinux
-   entries despite the role supporting RedHat family). Needs the
-   `dependencies: []` ordering check (already correct), author/namespace/
-   company update, `min_ansible_version: "2.20"`, EOL-checked platform list
-   via `lookup_platform.py`, and expanded `galaxy_tags`.
-4. **`defaults/` vs `vars/` split** — already mostly correct (OS-specific
-   package/version data lives in `vars/<OsFamily>.yml`, generic
-   user-overridable settings in `defaults/main.yml`). Double-check no
-   OS-specific file crept into `defaults/` during the recent upstream
-   merge.
-5. **Preflight assertions** — `tasks/preflight.yml` does not exist yet.
-   Needs creation and wiring into `tasks/main.yml` before the first
-   OS-specific setup task runs.
-6. **README update** — sync Requirements/Supported Platforms/Role
-   Variables/Task Flow sections once Steps 3–5 land (platforms list will
-   change, preflight step needs documenting).
-7. **`molecule/default/molecule.yml` platform matrix + testinfra verifier**
-   — currently has no `verifier:` override (defaults to Ansible-based
-   verify) and its platform list needs to be re-derived from the refactored
-   `meta/main.yml`.
-8. **`molecule/default/converge.yml` rewrite** — currently contains
-   site-specific-looking PPA/repo-add pre_tasks (Ondrej Sury repo setup)
-   that should be reviewed against the "remove packages already provided
-   by geerlingguy images" guidance.
-9. **Molecule fixtures** — this role's `molecule/default/` has no
-   `group_vars/` fixture directory at all yet (no users/secrets to fixture,
-   but check whether any test-data anonymization guidance still applies
-   before assuming Step 11 is a no-op for this role).
-10. **pytest-testinfra suite** — `molecule/default/tests/` does not exist;
-    this role currently has no test suite at all beyond the converge/verify
-    playbooks.
-11. **`molecule/requirements.txt`** — does not exist yet; needs the
-    template's pinned versions copied in.
+Supported platforms: Debian 13 (trixie); Ubuntu 22.04 / 24.04 / 26.04;
+EL 9 / 10; current Fedora (no CI image — covered via EL).
+
+Remaining follow-ups (see `TODO.md` for full detail):
+
+1. **CI matrix out of sync** — `.github/workflows/ci.yml` still uses the
+   removed `MOLECULE_DISTRO` env pattern, tests `debian11`, and does not
+   test EL family. Rework the matrix to the explicit `molecule.yml`
+   platform list. Workflow authoring is outside the sync skill's scope.
+2. **EOL / dropped vars files still on disk** — `vars/Debian-11.yml`,
+   `vars/Debian-12.yml`, `vars/Ubuntu-20.yml`, `vars/Ubuntu-21.yml`
+   remain though those releases are no longer documented as supported.
+   Decide whether to delete for consistency.
+3. **Full molecule run** — `molecule test` has never run against a real
+   container. Run `ansible-galaxy install -r
+   molecule/default/requirements.yml && molecule test` before the next
+   release.
+4. **Dead Ubuntu 16.04 branch** — `tasks/main.yml` still has a
+   `php_opcache_conf_filename` special-case gated on
+   `distribution_version == "16.04"`. Remove it.
 
 ### Consumer side notes
 
-From the current README's "Example Playbook": consumers pull in
-`vars/main.yml` and reference the role as `{ role: geerlingguy.php }` (the
-Galaxy name — note this fork's actual role name in `meta/main.yml` is
-`php`, so downstream playbooks in this org should reference it by however
-it's pinned in their `requirements.yml`, not the upstream Galaxy FQCN).
-Consumers commonly override `php_memory_limit`, `php_max_execution_time`,
+From the README's "Example Playbook": consumers pull in `vars/main.yml`
+and reference the role as `{ role: realtime.php }` (namespace `realtime`,
+role name `php`, per `meta/main.yml`). Downstream playbooks in this org
+should reference it by however it's pinned in their `requirements.yml`,
+not the upstream `geerlingguy.php` Galaxy FQCN. Consumers commonly
+override `php_memory_limit`, `php_max_execution_time`,
 `php_upload_max_filesize`, and `php_packages` per the example. No
 `DESIGN.md` exists yet to capture a fuller consumer-side contract.
 

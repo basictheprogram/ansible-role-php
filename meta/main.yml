@@ -7,30 +7,14 @@ galaxy_info:
   author: "Bob Tanner"
   description: >-
     Installs and configures PHP (CLI, FPM, OpCache, APCu) from distro
-    packages or from source on RedHat/CentOS/Fedora and Debian/Ubuntu
-    servers. Manages php.ini, PHP-FPM pool configs, and OpCache/APCu
-    extension settings via templates.
+    packages or from source, and manages php.ini, PHP-FPM pool configs,
+    and OpCache/APCu extension settings via templates. Targets Debian
+    (trixie), Ubuntu (jammy, noble, resolute), EL 9/10
+    (RHEL/CentOS/Rocky/AlmaLinux), and current Fedora releases.
   company: "Real Time Enterprises, Inc."
   license: MIT
   min_ansible_version: "2.20"
   issue_tracker_url: https://github.com/basictheprogram/ansible-role-php/issues
-  platforms:
-    - name: Fedora
-      versions:
-        - all
-    - name: Debian
-      versions:
-        - bookworm  # 12
-        - trixie    # 13
-    - name: Ubuntu
-      versions:
-        - jammy    # 22.04
-        - noble    # 24.04
-        - resolute # 26.04
-    - name: EL
-      versions:
-        - "9"
-        - "10"
   galaxy_tags:
     - development
     - web

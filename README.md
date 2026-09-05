@@ -15,14 +15,14 @@ Installs and configures PHP (CLI, FPM, OpCache, APCu) on RedHat/CentOS and Debia
 
 ## Supported Platforms
 
-Matches `meta/main.yml`:
+Matches the `description:` in `meta/main.yml`:
 
 | OS family | Versions |
 | --- | --- |
-| Fedora | all |
-| Debian | 12 (bookworm), 13 (trixie) |
+| Debian | 13 (trixie) |
 | Ubuntu | 22.04 (jammy), 24.04 (noble), 26.04 (resolute) |
 | EL (RHEL/CentOS/Rocky/AlmaLinux) | 9, 10 |
+| Fedora | current releases |
 
 ## Role Variables
 
@@ -75,7 +75,7 @@ php_fpm_pools:
     pool_pm_status_path: "{{ php_fpm_pm_status_path }}"
 ```
 
-List of PHP-FPM pools to create; the `www` pool is created by default. To add a pool, append an item — each item may override any `pool_pm_*` key, or replace the whole pool config with a custom template via `pool_template`. `preflight.yml` asserts every pool entry defines a non-empty `pool_name` when `php_enable_php_fpm` is `true`.
+List of PHP-FPM pools to create; the `www` pool is created by default. To add a pool, append an item — each item may override any `pool_pm_*` key, or replace the whole pool config with a custom template via `pool_template`. `preflight.yml` asserts every pool entry defines a non-empty `pool_name` and `pool_listen` when `php_enable_php_fpm` is `true`.
 
 ### php.ini settings
 
@@ -188,7 +188,6 @@ Default PHP version per supported release (`__php_default_version_debian`, only 
 
 | Release | Default PHP version |
 | --- | --- |
-| Debian 12 (bookworm) | 8.2 |
 | Debian 13 (trixie) | 8.4 |
 | Ubuntu 22.04 (jammy) | 8.1 |
 | Ubuntu 24.04 (noble) | 8.3 |
@@ -196,7 +195,7 @@ Default PHP version per supported release (`__php_default_version_debian`, only 
 
 ## Task Flow
 
-1. **Preflight** (`tasks/preflight.yml`) — asserts ansible-core >= 2.20, that the target's OS family is supported, and (when `php_enable_php_fpm` is `true`) that every `php_fpm_pools` entry has a `pool_name`.
+1. **Preflight** (`tasks/preflight.yml`) — asserts ansible-core >= 2.20, that the target's OS family is supported, and (when `php_enable_php_fpm` is `true`) that every `php_fpm_pools` entry has a `pool_name` and `pool_listen`.
 2. **Variable setup** — loads `vars/<OsFamily>.yml`, then `vars/<Distribution>-<MajorVersion>.yml` if present, and computes any `php_*` fact not already defined.
 3. **Install** — `setup-RedHat.yml` or `setup-Debian.yml` (package install), or `install-from-source.yml` when `php_install_from_source` is `true`.
 4. **Configure** — `configure.yml` (php.ini), `configure-apcu.yml`, `configure-opcache.yml`, `configure-fpm.yml`, each notifying the webserver/php-fpm restart handlers on change.

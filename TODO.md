@@ -1,81 +1,90 @@
 # TODO — ansible-role-php sync
 
-Flagged during the `ansible-sync-role` pass on 2026-07-01 but not resolved in
-this session. Nothing below blocks a commit; these are follow-ups.
+Flagged during `ansible-sync-role` passes but not resolved. Nothing below
+blocks a commit; these are follow-ups.
+
+Original pass: 2026-07-01. Re-sync against current template: 2026-09-05.
 
 ## Needs your decision
 
-* **Skill package self-contradiction.** `SKILL.md` for this skill claims
-  `ansible-playbooks/.claude/skills/ansible-sync-role/` is inert/dead and
-  "safe to delete," but `references/steps.md` (the file that actually
-  governs Steps 9/10/12/13) sources real, current content from
-  `assets/` inside that exact folder — confirmed present and load-bearing.
-  Also, before any of this, the SKILL.md content included an unprompted
-  instruction to delete that folder, which I did not act on. Worth sorting
-  out what's actually going on with that repo independent of this sync.
+* **Dropped / EOL vars files left in place.** `vars/Debian-11.yml`,
+  `vars/Debian-12.yml`, `vars/Ubuntu-20.yml`, and `vars/Ubuntu-21.yml`
+  still exist on disk even though those releases are no longer in the
+  supported-platform statement (`meta/main.yml` `description:`, README,
+  `molecule.yml`). Debian 12 was dropped in the 2026-09-05 re-sync
+  (full-support EOL ~2026-08; Debian-LTS to 2028-06). The role still
+  technically works on all four — they're just undocumented. Decide
+  whether to delete them for full consistency.
 
-* **`.github/workflows/ci.yml` platform matrix is now out of sync with
-  `meta/main.yml`.** The CI matrix tests `debian11` (dropped from
-  `platforms:` as EOL) and doesn't test EL/RedHat family or Fedora at all
-  — a `rockylinux9` entry exists but is commented out, citing
+* **`.github/workflows/ci.yml` is now well out of sync.** It still drives
+  molecule with the `MOLECULE_DISTRO` env-var pattern that the 2026-09-05
+  re-sync removed from `molecule.yml` (now an explicit 6-platform list:
+  `debian-trixie`, `ubuntu-jammy`, `ubuntu-noble`, `ubuntu-resolute`,
+  `el-9`, `el-10`). The CI matrix also tests `debian11`, doesn't test
+  EL/RedHat family, and has a commented-out `rockylinux9` entry citing
   [geerlingguy/ansible-role-php#434](https://github.com/geerlingguy/ansible-role-php/issues/434).
-  Editing workflow files is out of scope for this skill's Procedure B, so
-  this wasn't touched. You'll want to update the matrix to match the new
-  `platforms:` list (drop debian11, add debian12/13, ubuntu2204/2404, and
-  resolve or re-test the Rocky/EL entry).
-
-* **EOL vars files left in place.** `vars/Debian-11.yml`, `vars/Ubuntu-20.yml`,
-  and `vars/Ubuntu-21.yml` still exist on disk even though those releases
-  were dropped from `meta/main.yml` `platforms:` (per your answers during
-  Step 5). Step 5's scope was the `platforms:` metadata only, not deleting
-  vars files, so the role will still technically work on those OS versions
-  — they're just no longer documented as supported. Decide whether to
-  delete them too for full consistency.
+  Workflow authoring is out of scope for the sync skill's Procedure B —
+  rework the matrix by hand to match `molecule.yml`.
 
 * **`php_default_version_debian` has no default in `defaults/main.yml`**
-  (it's commented out there deliberately) and instead relies entirely on
-  each `vars/<Distribution>-<version>.yml` file setting
-  `__php_default_version_debian`. This is documented as intentional in the
-  README/argument_specs now, but worth a second look to confirm it's the
-  design you want going forward, especially since EL (RedHat family) has
-  no per-version vars files at all — a single `vars/RedHat.yml` covers
-  every EL version/Fedora with a fixed, unversioned package list. If EL 9
-  vs. EL 10 ever need different PHP versions or package names, that'll
-  need a similar per-version split to what Debian/Ubuntu already have.
+  (commented out deliberately); each `vars/<Distribution>-<version>.yml`
+  supplies `__php_default_version_debian`. Documented as intentional in
+  the README/argument_specs. EL (RedHat family) has no per-version vars
+  files — a single `vars/RedHat.yml` covers every EL version/Fedora with
+  a fixed, unversioned package list. If EL 9 vs. EL 10 ever need
+  different PHP versions or package names, that'll need a per-version
+  split like Debian/Ubuntu already have.
 
-## Needs verification (not run in this session)
-
-* **`molecule test` / `molecule converge` were never actually run.** This
-  sandbox has no Docker. Everything in this sync was verified statically
-  (`ansible-lint`, `yamllint`, `ruff check`, YAML parsing, and manual
-  reasoning about file paths) but the role has not been converged against
-  a real container. Run the full suite for real before merging:
-  `ansible-galaxy install -r molecule/default/requirements.yml && molecule test`.
-* The two remaining `ansible-lint` failures (`geerlingguy.repo-remi` and
-  `geerlingguy.git` roles not found) are exactly that — install them via
-  the command above and they'll resolve.
+* **Skill package self-contradiction (upstream tooling, not this role).**
+  `SKILL.md` for `ansible-sync-role` claims
+  `ansible-playbooks/.claude/skills/ansible-sync-role/` is inert/dead and
+  "safe to delete," but `references/steps.md` sources real content from
+  `assets/` inside that folder. Worth sorting out independently.
 
 ## Minor, left alone on purpose (surgical-changes principle)
 
-* `tasks/configure.yml` has a leftover `- name: Debug` task that prints
-  `php_include_path` with no apparent purpose (register, conditional, etc).
-  FQCN'd it for lint compliance but didn't delete it, since it predates
-  this session's changes — worth a look, might be dev cruft.
-* Pre-existing yamllint nits not touched: `.github/workflows/stale.yml` has
-  2 lines of trailing whitespace; `molecule/default/converge.yml` and
-  `molecule/default/source-install.yml` both have a `#become: true` comment
-  missing a leading space.
-* `molecule/default/source-install.yml` wasn't touched in Steps 9/10 (only
-  `converge.yml` was in explicit scope) — it's referenced by `ci.yml` but
-  currently commented out there, so it's untested either way.
+* **Dead Ubuntu 16.04 branch.** `tasks/main.yml` has a
+  `php_opcache_conf_filename` `set_fact` gated on
+  `ansible_facts.distribution_version == "16.04"`. Ubuntu 16.04 is long
+  EOL and not a supported platform — the `when` can never be true.
+  Pre-existing; not deleted without being asked.
 
-## Breaking change to call out in the commit
+* **testinfra suite nits.** `_REDHAT_DISTROS` is defined identically in
+  both `molecule/default/tests/test_php.py` and `test_packages.py` — the
+  skeleton convention is a shared `_data.py`. And `test_packages.py` only
+  checks that `openssh-client`/`openssh-clients` is installed (a base
+  image package, not role-managed) — it's really a testinfra-plumbing
+  smoke test; consider asserting an actual PHP package instead.
 
-* `handlers/main.yml`'s two handlers were renamed for `name[casing]`
-  compliance: `restart webserver` → `Restart webserver`,
-  `restart php-fpm` → `Restart php-fpm`. All 15 internal `notify:`
-  references were updated to match, so the role itself is consistent —
-  but this is technically a breaking rename for any external
-  playbook/role that notifies these handlers by exact string from outside
-  this role. Flag with `!` in the commit subject per this repo's commit
-  guide.
+* **`molecule/default/source-install.yml` not touched.** Step 10's scope
+  was `converge.yml`. `source-install.yml` still pins `php_version:
+  "7.4.8"` (PHP 7.4 is EOL) and has a `# become: true` comment missing a
+  leading space (yamllint nit). It's referenced by `ci.yml` but
+  currently commented out there.
+
+* Pre-existing yamllint nits not touched: `.github/workflows/stale.yml`
+  trailing whitespace.
+
+## Needs verification (not run in this session)
+
+* **`molecule test` / `molecule converge` have never actually run.** No
+  Docker in the sync sandboxes. Everything was verified statically
+  (YAML parsing, manual reasoning about paths and lint rules). Run the
+  full suite before merging:
+  `ansible-galaxy install -r molecule/default/requirements.yml && molecule test`.
+* **`ansible-lint` / `yamllint` / `pre-commit` are not installed in the
+  re-sync environment** — the 2026-09-05 pass reasoned about lint rules
+  statically but could not run them. Run `pre-commit run --all-files`
+  before committing.
+* The `geerlingguy.repo-remi` and `geerlingguy.git` roles resolve once
+  installed via `ansible-galaxy role install -r
+  molecule/default/requirements.yml`.
+
+## Breaking change already shipped (in 9de10d6, for reference)
+
+* `handlers/main.yml` handlers were renamed for `name[casing]`:
+  `restart webserver` → `Restart webserver`, `restart php-fpm` →
+  `Restart php-fpm`. All internal `notify:` references were updated.
+  External playbooks/roles notifying these handlers by exact string
+  must update. `meta/main.yml` also dropped declared support for
+  Debian 11, Ubuntu 20.04/21.x, and EL 8.

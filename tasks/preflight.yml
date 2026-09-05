@@ -17,13 +17,16 @@
       (only Debian and RedHat OS families are supported).
     quiet: true
 
-- name: Assert each PHP-FPM pool has a pool_name defined.
+- name: Assert each PHP-FPM pool defines pool_name and pool_listen.
   ansible.builtin.assert:
     that:
       - item.pool_name is defined
       - item.pool_name | length > 0
+      - item.pool_listen is defined
+      - item.pool_listen | length > 0
     fail_msg: >-
-      Every entry in php_fpm_pools must define a non-empty pool_name.
+      Every entry in php_fpm_pools must define a non-empty pool_name and
+      pool_listen (www.conf.j2 marks pool_listen as mandatory).
     quiet: true
   loop: "{{ php_fpm_pools | default([], true) }}"
   loop_control:
